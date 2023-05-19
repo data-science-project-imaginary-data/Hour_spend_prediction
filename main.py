@@ -9,14 +9,17 @@ from ms.functions import get_model_response
 
 
 model_name = "Traffyfondue's task hour spend prediction"
-version = "v0.0.1"
+version = "v0.2.0"
 
 
 # Input for data validation
 class Input(BaseModel):
     types: list[str]
-
-
+    organization: list[str]
+    comment: str
+    latitude: float
+    longitude: float
+    
 # Ouput for data validation
 class Output(BaseModel):
     prediction: float

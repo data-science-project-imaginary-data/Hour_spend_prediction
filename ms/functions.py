@@ -1,25 +1,21 @@
-import numpy as np
+import math
 import pandas as pd
-from ms import model
+from train.utils import make_binary_feature
 
-# comment types
-all_types = ['อื่นๆ', 'ถนน', 'ทางเท้า', 'แสงสว่าง', 'ความปลอดภัย', 'ความสะอาด', 'น้ำท่วม', 'กีดขวาง',
-             'ท่อระบายน้ำ', 'จราจร', 'สะพาน', 'สายไฟ', 'เสียงรบกวน', 'คลอง', 'ต้นไม้', 'ร้องเรียน', 'ป้าย',
-             'สัตว์จรจัด', 'สอบถาม', 'PM2.5', 'เสนอแนะ', 'คนจรจัด', 'การเดินทาง', 'ห้องน้ำ', 'ป้ายจราจร']
-toi = {t:idx for idx, t in enumerate(all_types)}
+import mlflow
 
-def predict(data):
+logged_model = 'runs:/056dc023dd6c4d1bb03f703230dd841b/rf_reg_model'
+
+# Load model as a PyFuncModel.
+loaded_model = mlflow.pyfunc.load_model(logged_model)
+
+def predict(data_df):
     # model prediction
-    types = data["types"][0]
-    type_vec = [0] * 25
-    if len(types) == 0:
-        type_vec[0] = 1
-    else:
-        for t in types:
-            print(t)
-            type_vec[toi[t]] = 1
-    X = np.array([type_vec])
-    prediction = model.predict(X)[0]
+    type_feature = make_binary_feature(data_df['types'], 'type')
+    org_feature = make_binary_feature(data_df['organization'], 'organization')
+    Input = pd.concat((type_feature, org_feature, data_df[['comment', 'latitude', 'longitude']]), axis=1)
+
+    prediction = loaded_model.predict(Input)
     return prediction
 
 
@@ -27,5 +23,5 @@ def get_model_response(input):
     X = pd.json_normalize(input.__dict__)
     prediction = predict(X)
     return {
-        'prediction': prediction
+        'prediction': prediction,
     }
