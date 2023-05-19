@@ -5,7 +5,9 @@ from utils import *
 
 # data preprocessing
 import pythainlp
+from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
+from sklearn.feature_extraction.text import CountVectorizer
 
 # model
 from sklearn.pipeline import Pipeline
@@ -59,7 +61,10 @@ if __name__ == "__main__":
         mlflow.log_param("seed", randseed)
 
         numeric_transformer = Pipeline(steps = [('StandardScaler', StandardScaler())])
-        preprocessor = ColumnTransformer(transformers = [('nums', numeric_transformer, ['latitude', 'longitude'])])
+        text_vectorizer = Pipeline(steps=[('TextVectorizer', CountVectorizer(min_df=min_df, tokenizer=pythainlp.word_tokenize, analyzer='word'))])
+
+        preprocessor = ColumnTransformer(transformers = [('nums', numeric_transformer, ['latitude', 'longitude']),
+                                                 ('text',text_vectorizer, 'comment')])
         # model
         model = RandomForestRegressor(n_estimators=n_estimators, 
                                     criterion=criterion,

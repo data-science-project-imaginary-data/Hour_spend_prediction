@@ -6,9 +6,7 @@ from utils import *
 # data preprocessing
 import pythainlp
 from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
 # model
 from sklearn.pipeline import Pipeline
@@ -55,11 +53,9 @@ if __name__ == "__main__":
         mlflow.log_param("min_df", min_df)
         mlflow.log_param("seed", randseed)
 
-        numeric_transformer = Pipeline(steps = [('MinMaxScaler', MinMaxScaler())])
-        text_vectorizer = Pipeline(steps=[('TextVectorizer', CountVectorizer(min_df=min_df, tokenizer=pythainlp.word_tokenize, analyzer='word'))])
+        numeric_transformer = Pipeline(steps = [('StandardScaler', StandardScaler())])
 
-        preprocessor = ColumnTransformer(transformers = [('nums', numeric_transformer, ['latitude', 'longitude']),
-                                                 ('text',text_vectorizer, 'comment')])
+        preprocessor = ColumnTransformer(transformers = [('nums', numeric_transformer, ['latitude', 'longitude'])])
         # model
         model = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, random_state=randseed)
         # model pipeline

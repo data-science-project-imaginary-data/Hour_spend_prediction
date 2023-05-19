@@ -5,12 +5,14 @@ from utils import *
 
 # data preprocessing
 import pythainlp
+from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
+from sklearn.feature_extraction.text import CountVectorizer
 
 # model
 from sklearn.pipeline import Pipeline
-from sklearn.compose import ColumnTransformer, make_column_selector
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.compose import ColumnTransformer
+from sklearn.linear_model import ElasticNet
 
 from urllib.parse import urlparse
 
@@ -27,12 +29,9 @@ logger = logging.getLogger(__name__)
 if __name__ == "__main__":
     randseed = 54
     
-    criterion = sys.argv[1] if len(sys.argv) > 1 else 'squared_error'
-    max_depth = int(sys.argv[2]) if len(sys.argv) > 2 else None
-    max_features= float(sys.argv[3]) if len(sys.argv) > 3 else 0.3
-    min_samples_leaf = int(sys.argv[4]) if len(sys.argv) > 4 else 2
-    n_estimators = int(sys.argv[5]) if len(sys.argv) > 5 else 200
-    min_df = int(sys.argv[6]) if len(sys.argv) > 6 else 3
+    alpha = float(sys.argv[1]) if len(sys.argv) > 1 else 1
+    l1_ratio = float(sys.argv[2]) if len(sys.argv) > 2 else 0.5
+    min_df = int(sys.argv[3]) if len(sys.argv) > 3 else 3
 
     train = pd.read_json('data/train.json').reset_index(drop=True)
     test = pd.read_json('data/test.json').reset_index(drop=True)
@@ -50,33 +49,26 @@ if __name__ == "__main__":
     y_test = test['hour_spend'].values
     
     with mlflow.start_run():
-        mlflow.log_param("criterion", criterion)
-        mlflow.log_param("max_depth", max_depth)
-        mlflow.log_param("max_features", max_features)
-        mlflow.log_param("min_samples_leaf", min_samples_leaf)
-        mlflow.log_param("n_estimators", n_estimators)
+        mlflow.log_param("alpha", alpha)
+        mlflow.log_param("l1_ratio", l1_ratio)
         mlflow.log_param("min_df", min_df)
         mlflow.log_param("seed", randseed)
 
         numeric_transformer = Pipeline(steps = [('StandardScaler', StandardScaler())])
-        preprocessor = ColumnTransformer(transformers = [('nums', numeric_transformer, ['latitude', 'longitude'])])
+        text_vectorizer = Pipeline(steps=[('TextVectorizer', CountVectorizer(min_df=min_df, tokenizer=pythainlp.word_tokenize, analyzer='word'))])
+
+        preprocessor = ColumnTransformer(transformers = [('nums', numeric_transformer, ['latitude', 'longitude']),
+                                                 ('text',text_vectorizer, 'comment')])
         # model
-        model = RandomForestRegressor(n_estimators=n_estimators, 
-                                    criterion=criterion,
-                                    max_features=max_features,
-                                    min_samples_leaf=min_samples_leaf,
-                                    max_depth=max_depth,
-                                    random_state=randseed,
-                                    n_jobs=-1)
+        model = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, random_state=randseed)
         # model pipeline
         modelPipeline = Pipeline(steps = [('preprocessor', preprocessor),
                                         ('model', model)])
         modelPipeline.fit(X_train, y_train)
         
         score = modelPipeline.score(X_train, y_train)
-        print("""RandomForest regressor model (criterion={}, max_depth={}, max_features={}
-                min_samples_leaf={} n_estimators={})""".format(criterion, max_depth, max_features, min_samples_leaf, n_estimators))
-        print("  training LogR2:", score)
+        print("""Elasticnet model (alpha={}, l1_ratio={})""".format(alpha, l1_ratio))
+        print("  training R2:", score)
 
         # evaluate model in original scale
         (rmse, mse, r2) = evaluate_regression(modelPipeline, X_test, y_test)
@@ -101,7 +93,7 @@ if __name__ == "__main__":
             # please refer to the doc for more information:
             # https://mlflow.org/docs/latest/model-registry.html#api-workflow
             mlflow.sklearn.log_model(
-                modelPipeline, "model", registered_model_name="RandomForestTraffyModel", signature=signature
+                modelPipeline, "model", registered_model_name="ElasticNetTraffyModel", signature=signature
             )
         else:
-            mlflow.sklearn.log_model(modelPipeline, "rf_reg_model", signature=signature)
+            mlflow.sklearn.log_model(modelPipeline, "elasticnet_model_with_text", signature=signature)
