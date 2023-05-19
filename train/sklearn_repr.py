@@ -5,7 +5,7 @@ from utils import *
 
 # data preprocessing
 import pythainlp
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 
 # model
 from sklearn.pipeline import Pipeline
@@ -58,7 +58,7 @@ if __name__ == "__main__":
         mlflow.log_param("min_df", min_df)
         mlflow.log_param("seed", randseed)
 
-        numeric_transformer = Pipeline(steps = [('StandardScaler', StandardScaler())])
+        numeric_transformer = Pipeline(steps = [('MinMaxScaler', MinMaxScaler())])
         preprocessor = ColumnTransformer(transformers = [('nums', numeric_transformer, ['latitude', 'longitude'])])
         # model
         model = RandomForestRegressor(n_estimators=n_estimators, 
