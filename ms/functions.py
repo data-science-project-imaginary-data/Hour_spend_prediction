@@ -1,10 +1,15 @@
-import math
+import os
 import pandas as pd
 from train.utils import make_binary_feature
+from dotenv import load_dotenv
+import urllib
 
 import mlflow
 
-logged_model = 'runs:/056dc023dd6c4d1bb03f703230dd841b/rf_reg_model'
+load_dotenv()
+
+
+logged_model = os.getenv('MODEL_PATH')
 
 # Load model as a PyFuncModel.
 loaded_model = mlflow.pyfunc.load_model(logged_model)
